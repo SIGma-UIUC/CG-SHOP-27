@@ -1,1 +1,3 @@
 src/examples/
+__pycache__/
+*.py[cod]
