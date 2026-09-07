@@ -29,39 +29,29 @@ uv python install 3.14.0
 uv sync --python 3.14.0
 ```
 
-These commands create `.venv` and install the dependencies. Use stable Python
-3.14.0 rather than the old `3.14.0rc1` prerelease, which can fail when importing
-Pydantic. If an old standalone installation of uv cannot find stable Python,
-run `uv self update` first (or update uv through the tool you installed it with).
+These commands create `.venv` with Python 3.14.0 and install the dependencies.
 
-Keep your terminal in `src/utils` for all commands below. `uv run` uses the
-environment automatically, so activation is not required.
+Activate the environment using the command for your terminal:
 
-## Included examples
+| Terminal | Activation command |
+| --- | --- |
+| Windows Command Prompt | `.venv\Scripts\activate.bat` |
+| Windows PowerShell | `.\.venv\Scripts\Activate.ps1` |
+| macOS/Linux bash or zsh | `source .venv/bin/activate` |
 
-The example instances and solutions are committed under `src/examples/` and
-are included in a fresh clone. No separate download is needed. The example
-used below is at:
+Keep your terminal in `src/utils` with the environment activated for all
+commands below. Activate it again whenever you open a new terminal.
+You can check the selected Python version with `python --version`.
 
-```text
-src/
-  examples/
-    test_instances1/
-      srpg_246_821_1s3.instance.json
-    test_solutions1/
-      srpg_246_821_1s3.solution.json
-  utils/
-    verify.py
-    display.py
-    pyproject.toml
-```
+After dependency changes, run `uv sync --python 3.14.0` again.
+Run `deactivate` when you are finished to leave the environment.
 
 ## Verify an example solution
 
 From `src/utils`, run this as one line:
 
 ```sh
-uv run --python 3.14.0 verify.py ../examples/test_instances1/srpg_246_821_1s3.instance.json ../examples/test_solutions1/srpg_246_821_1s3.solution.json
+python verify.py ../examples/test_instances1/srpg_246_821_1s3.instance.json ../examples/test_solutions1/srpg_246_821_1s3.solution.json
 ```
 
 A feasible solution prints:
@@ -79,7 +69,7 @@ another example or your own solver's output.
 From `src/utils`, run this as one line:
 
 ```sh
-uv run --python 3.14.0 display.py ../examples/test_instances1/srpg_246_821_1s3.instance.json ../examples/test_solutions1/srpg_246_821_1s3.solution.json
+python display.py ../examples/test_instances1/srpg_246_821_1s3.instance.json ../examples/test_solutions1/srpg_246_821_1s3.solution.json
 ```
 
 This opens a plot showing the cutter routes and swept area, with uncovered
@@ -91,23 +81,27 @@ To save the plot instead of opening a window (also works without a graphical
 display), add `--output`:
 
 ```sh
-uv run --python 3.14.0 display.py ../examples/test_instances1/srpg_246_821_1s3.instance.json ../examples/test_solutions1/srpg_246_821_1s3.solution.json --output ../examples/solution.png
+python display.py ../examples/test_instances1/srpg_246_821_1s3.instance.json ../examples/test_solutions1/srpg_246_821_1s3.solution.json --output ../examples/solution.png
 ```
 
-Open the PNG in VS Code or an image viewer. New output files in `src/examples/`
-are ignored by Git; the committed example JSON files remain tracked.
+Open the PNG in VS Code or an image viewer.
 
-## Optional: activate the environment
+## Animate a solution
 
-If you prefer plain `python` commands instead of `uv run`, activate `.venv`
-once per terminal session:
+With the environment activated, run from `src/utils`:
 
-| Terminal | Activation command |
-| --- | --- |
-| Windows Command Prompt | `.venv\Scripts\activate.bat` |
-| Windows PowerShell | `.\.venv\Scripts\Activate.ps1` |
-| macOS/Linux bash or zsh | `source .venv/bin/activate` |
+```sh
+python display.py ../examples/test_instances1/srpg_246_821_1s3.instance.json ../examples/test_solutions1/srpg_246_821_1s3.solution.json --animate
+```
 
-Then use `python verify.py ...` or `python display.py ...` with the examples above. Run
-`deactivate` to leave the environment. After dependency changes, run
-`uv sync --python 3.14.0` again.
+The window shows the cutters moving along their routes and the swept area
+growing behind them. Close the window to return to your terminal.
+
+To save a GIF instead of opening a window:
+
+```sh
+python display.py ../examples/test_instances1/srpg_246_821_1s3.instance.json ../examples/test_solutions1/srpg_246_821_1s3.solution.json --animate --output ../examples/solution.gif
+```
+
+GIF export can take a while. Animated output must have a `.gif` extension;
+without `--animate`, the script still produces a static plot.
