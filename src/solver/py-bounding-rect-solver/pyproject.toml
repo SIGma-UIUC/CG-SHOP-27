@@ -1,10 +1,12 @@
 [project]
-name = "utils"
+name = "py-bounding-rect-solver"
 version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "cgshop2027-pyutils",
-    "pydantic>=2.13.5",
+    "more-itertools>=11.1.0",
 ]
 
 [tool.uv.sources]
