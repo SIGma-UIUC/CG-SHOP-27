@@ -1,0 +1,69 @@
+name: Solver benchmark
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      large:
+        description: Include generated large stress instances
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: benchmark-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: candidate
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          path: merged
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.10'
+          enable-cache: false
+      - name: Install locked environments outside measured runs
+        run: |
+          uv sync --frozen --project candidate/src/utils
+          for project in candidate/src/solver/* merged/src/solver/*; do
+            if [ -f "$project/main.py" ] && [ -f "$project/pyproject.toml" ]; then
+              uv sync --frozen --project "$project"
+            fi
+          done
+      - name: Evaluate the same sample for merged and proposed solvers
+        env:
+          INCLUDE_LARGE: ${{ inputs.large || false }}
+          IS_PR: ${{ github.event_name == 'pull_request' }}
+        run: |
+          args=(--solver-root candidate=candidate/src/solver)
+          if [ "$IS_PR" = true ]; then
+            args+=(--solver-root merged=merged/src/solver)
+          fi
+          if [ "$INCLUDE_LARGE" = true ]; then args+=(--large); fi
+          candidate/src/utils/.venv/bin/python candidate/src/utils/eval-solver.py \
+            merged/src/examples/test_instances1 "${args[@]}" \
+            --sample 10 --timeout 30 --animate --output benchmark-results
+      - name: Job summary
+        if: always()
+        run: |
+          if [ -f benchmark-results/report.md ]; then
+            cat benchmark-results/report.md >> "$GITHUB_STEP_SUMMARY"
+            echo 'Download solver-benchmark to open the GIF links.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: solver-benchmark
+          path: benchmark-results/
+          retention-days: 30
+          if-no-files-found: warn

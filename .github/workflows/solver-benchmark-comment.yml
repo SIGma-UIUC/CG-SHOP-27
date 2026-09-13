@@ -1,0 +1,74 @@
+name: Solver benchmark comment
+on:
+  workflow_run:
+    workflows: [Solver benchmark]
+    types: [completed]
+permissions:
+  actions: read
+  pull-requests: write
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      # Never check out or execute PR code in this privileged workflow.
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: solver-benchmark
+          path: report-data
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const run = context.payload.workflow_run;
+            let prs = run.pull_requests;
+            if (prs.length === 0) {
+              const associated = await github.rest.repos.listPullRequestsAssociatedWithCommit({...context.repo, commit_sha: run.head_sha});
+              prs = associated.data.filter(p => p.head.sha === run.head_sha && p.base.repo.full_name === `${context.repo.owner}/${context.repo.repo}`);
+            }
+            if (prs.length !== 1) return;
+            const pr = prs[0];
+            const current = await github.rest.pulls.get({...context.repo, pull_number: pr.number});
+            if (current.data.head.sha !== run.head_sha) return;
+            const marker = '<!-- solver-benchmark -->';
+            let body = `${marker}\n### Solver benchmark\n[Run and downloadable animations](${run.html_url})\n\n`;
+            const path = 'report-data/results.json';
+            if (fs.existsSync(path) && fs.statSync(path).size < 1000000) {
+              const rows = JSON.parse(fs.readFileSync(path, 'utf8'));
+              if (!Array.isArray(rows) || rows.length > 500) throw new Error('Invalid report size');
+              const text = x => String(x ?? '').replace(/[^a-zA-Z0-9_ ./-]/g, '').slice(0, 120);
+              const number = x => typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x.toFixed(3) : '-';
+              const best = new Map();
+              for (const r of rows) {
+                if (r.status === 'valid' && typeof r.max_len === 'number' && Number.isFinite(r.max_len) && r.max_len >= 0)
+                  best.set(r.instance, Math.min(best.get(r.instance) ?? Infinity, r.max_len));
+              }
+              const groups = new Map();
+              for (const r of rows) {
+                const key = text(r.solver);
+                if (!groups.has(key)) groups.set(key, {name:key, count:0, valid:0, score:0});
+                const g = groups.get(key);
+                g.count++;
+                if (r.status === 'valid' && best.has(r.instance) && typeof r.max_len === 'number' && Number.isFinite(r.max_len) && r.max_len >= 0) {
+                  g.valid++;
+                  g.score += r.max_len === 0 ? 1 : best.get(r.instance) / r.max_len;
+                }
+              }
+              body += '| Solver | Valid | Relative score |\n|---|---:|---:|\n';
+              for (const g of [...groups.values()].sort((a,b) => b.valid-a.valid || b.score/b.count-a.score/a.count))
+                body += `| ${g.name} | ${g.valid}/${g.count} | ${(g.score/g.count).toFixed(4)} |\n`;
+              body += '\nCoverage efficiency = field area / sum of per-cutter swept areas. Time is solver wall time. Memory is sampled process-tree RSS.\n\n';
+              body += '| Solver | Instance (UID) | Status | Efficiency | Max len | Time (s) | Memory (MiB) |\n|---|---|---|---:|---:|---:|---:|\n';
+              for (const r of rows.slice(0, 100))
+                body += `| ${text(r.solver)} | ${text(r.instance)} | ${text(r.status)} | ${number(r.efficiency)} | ${number(r.max_len)} | ${number(r.time_s)} | ${number(r.memory_mib)} |\n`;
+              body += '\nFull table and GIFs are in the run artifact. Results are produced by PR code and are advisory.\n';
+            } else {
+              body += 'No complete report was produced. See the run logs.\n';
+            }
+            const comments = await github.paginate(github.rest.issues.listComments, {...context.repo, issue_number: pr.number});
+            const old = comments.find(c => c.user.type === 'Bot' && c.body.startsWith(marker));
+            if (old) await github.rest.issues.updateComment({...context.repo, comment_id: old.id, body});
+            else await github.rest.issues.createComment({...context.repo, issue_number: pr.number, body});
