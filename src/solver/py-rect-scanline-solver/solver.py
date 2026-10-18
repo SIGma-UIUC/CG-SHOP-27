@@ -1,8 +1,7 @@
-from collections import defaultdict
 from math import ceil
 from typing import NamedTuple, Self
 
-from more_itertools import divide, flatten, unique_justseen
+from more_itertools import divide, unique_justseen
 
 from cgshop2027_pyutils.schemas import (
     CGSHOP2027Instance,
@@ -68,11 +67,13 @@ def band_sweep(spans, anchor_y, cutter) -> tuple[int, int] | None:
     return (start, end)
 
 def solve(instance: CGSHOP2027Instance) -> CGSHOP2027Solution:
+    if len(instance.cutter.x) != 4:
+        raise ValueError(f"{instance.instance_uid}: Non-rectangular cutter")
+
     boundary = instance.region_to_cover.outer_boundary
     lawn = Rect.enclosing(boundary.x, boundary.y)
     cutter = Rect.enclosing(instance.cutter.x, instance.cutter.y, instance.cutter_center)
 
-    x_start, x_end = lawn.left - cutter.right, lawn.right - cutter.left
     strip_count = max(ceil(lawn.height / cutter.height), instance.number_of_cutters)
     anchor_rows = [lawn.top - cutter.top - i * cutter.height for i in range(strip_count)]
 
@@ -96,6 +97,9 @@ def solve(instance: CGSHOP2027Instance) -> CGSHOP2027Solution:
 
 
 def tour(bands: list[tuple[int, int, int]]) -> CutterTour:
+    if len(bands) == 0:
+        return CutterTour(x=[0], y=[0])
+
     points = []
     x_in = bands[0][1] 
     for i, (y, x_start, x_end) in enumerate(bands):
