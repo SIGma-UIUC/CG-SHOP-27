@@ -18,14 +18,6 @@ class Rectangle(NamedTuple):
     right: int
     top: int
 
-    def x_span(self, dx: int = 0) -> tuple[int, int]:
-        """Returns the left and right edge of the rightangle offsetted by dx"""
-        return self.left + dx, self.right + dx
-
-    def y_span(self, dy: int = 0) -> tuple[int, int]:
-        """Returns the top and bottom edge of the rectangle offsetted by dy"""
-        return self.bottom + dy, self.top + dy
-
     @property
     def height(self) -> int:
         """Height of the rectangle"""
