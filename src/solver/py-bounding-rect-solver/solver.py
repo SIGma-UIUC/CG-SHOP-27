@@ -9,32 +9,63 @@ from cgshop2027_pyutils.schemas import (
     CutterTour,
 )
 
-
 class Rectangle(NamedTuple):
+    """
+    A rectangle object described by the distance of the left, bottom, right, top edges from the center
+    """
     left: int
     bottom: int
     right: int
     top: int
 
+    def x_span(self, dx: int = 0) -> tuple[int, int]:
+        """Returns the left and right edge of the rightangle offsetted by dx"""
+        return self.left + dx, self.right + dx
+
+    def y_span(self, dy: int = 0) -> tuple[int, int]:
+        """Returns the top and bottom edge of the rectangle offsetted by dy"""
+        return self.bottom + dy, self.top + dy
+
     @property
     def height(self) -> int:
+        """Height of the rectangle"""
         return self.top - self.bottom + 1
 
     @property
     def width(self) -> int:
+        """Width of the rectangle"""
         return self.right - self.left + 1
 
     @classmethod
-    def enclosing(cls, xs: list[int], ys: list[int], offset=(0, 0)) -> Self:
+    def enclosing(
+        cls,
+        xs: list[int],
+        ys: list[int],
+        offset=(0, 0)
+    ) -> Self:
         """This computes a rectangular shape that covers xs and ys by aligning the four sides
         of the rectangle: left side, right side, bottom side and up side to the minimum of the xs,
-        the maximum of the xs, the minimum of the ys, the maximum of the ys respectively.
+        the maximum of the xs, the minimum of the ys, the maximum of the ys respectively shifted 
+        by the relative center of the shape.
+
+        A cutter given by the instance desrcibes its vertices position given a center
+        
+        "cutter": {
+            "x": [1, 0, 0, 1, 1, 3, 3, 4, 4, 3, 3, 1],
+            "y": [3, 3, 1, 1, 0, 0, 1, 1, 3, 3, 4, 4]
+        },
+        "cutter_center": [2, 2],
+
+        When we call Rectangle.enclosing(cutter), we consider the rectangle that covers the shape centered 
+        at (0,0) instead of (2,2) in this example.
 
         Args:
             xs: the list of x coordinates
             ys: the list of y coordinates
+            offset: the relative origin of the x and y coordinates
+            
         Returns:
-            A rectangle object that covers xs and ys
+            A rectangle object that covers xs and ys centered at the absolute origin
         """
         offset_x, offset_y = offset
         return cls(
@@ -43,7 +74,6 @@ class Rectangle(NamedTuple):
             max(xs) - 1 - offset_x,
             max(ys) - 1 - offset_y,
         )
-
 
 def solve(instance: CGSHOP2027Instance) -> CGSHOP2027Solution:
     """Solves an instance of the problem by solving instead an auxillary rectangular
@@ -55,6 +85,7 @@ def solve(instance: CGSHOP2027Instance) -> CGSHOP2027Solution:
     Returns:
         A solution to an rectangular cover of instance.
     """
+    number_of_cutters = instance.number_of_cutters
     boundary = instance.region_to_cover.outer_boundary
     lawn = Rectangle.enclosing(boundary.x, boundary.y)
     cutter = Rectangle.enclosing(
@@ -62,14 +93,13 @@ def solve(instance: CGSHOP2027Instance) -> CGSHOP2027Solution:
     )
 
     x_start, x_end = lawn.left - cutter.right, lawn.right - cutter.left
-
     y_start, y_end = lawn.top - cutter.bottom, lawn.bottom - cutter.top
 
     rows_strip_count = max(
-        ceil(lawn.height / cutter.height), instance.number_of_cutters
+        ceil(lawn.height / cutter.height), number_of_cutters
     )
     columns_strip_count = max(
-        ceil(lawn.width / cutter.width), instance.number_of_cutters
+        ceil(lawn.width / cutter.width), number_of_cutters
     )
 
     anchor_rows = [
@@ -79,17 +109,31 @@ def solve(instance: CGSHOP2027Instance) -> CGSHOP2027Solution:
         lawn.left - cutter.left + i * cutter.width for i in range(columns_strip_count)
     ]
 
-    tours = _tour(anchor_rows, x_start, x_end, anchor_columns, y_start, y_end, instance.number_of_cutters, cutter.height, cutter.width)
+    tours_vertical = []
+    for block in divide(number_of_cutters, anchor_columns):
+        tours_vertical.append(_tour_vertical(list(block), y_start, y_end))
+
+    tours_horizontal = []
+    for block in divide(number_of_cutters, anchor_rows):
+        tours_horizontal.append(_tour_horizontal(list(block), x_start, x_end))
+
+    def best_tour(tours_horizontal, tours_vertical):
+        longest_horizontal_tour = max(tours_horizontal, key=lambda tour: tour.length).length
+        longest_vertical_tour = max(tours_vertical, key=lambda tour: tour.length).length
+        return tours_horizontal if longest_horizontal_tour < longest_vertical_tour else tours_vertical
 
     return CGSHOP2027Solution(
         instance_uid=instance.instance_uid,
-        tours=tours,
+        tours=best_tour(tours_horizontal, tours_vertical),
         meta={"algorithm": "bounding-rect strips"},
     )
     # This the largest number of rows and columns that any cutter will be assigned to.
 
-
-def _tour_horizontal(anchor_rows: list[int], x_start: int, x_end: int) -> CutterTour:
+def _tour_horizontal(
+        anchor_rows: list[int],
+        x_start: int,
+        x_end: int
+    ) -> CutterTour:
     """It computes a tour of the anchor_rows in a zig-zag manner. For example, if
     anchor row has size 5 and the difference between x_start and x_end is 5, then our tour traverses the rows
     in the following manner
@@ -123,8 +167,11 @@ def _tour_horizontal(anchor_rows: list[int], x_start: int, x_end: int) -> Cutter
 
     return CutterTour(x=[x for x, _ in check_points], y=[y for _, y in check_points])
 
-
-def _tour_vertical(anchor_cols: list[int], y_start: int, y_end: int) -> CutterTour:
+def _tour_vertical(
+        anchor_cols: list[int],
+        y_start: int,
+        y_end: int
+    ) -> CutterTour:
     """The same as tour_horizontal except that we sweep columns"""
     check_points = []
 
@@ -140,89 +187,6 @@ def _tour_vertical(anchor_cols: list[int], y_start: int, y_end: int) -> CutterTo
         check_points.append((first_x, last_y))
 
     return CutterTour(x=[x for x, _ in check_points], y=[y for _, y in check_points])
-
-
-def _horizontal_more_optimal_than_vertical(
-    max_cutter_rows: int,
-    max_cutter_columns: int,
-    x_bounds: tuple[int, int],
-    y_bounds: tuple[int, int],
-    cutter_height,
-    cutter_width,
-):
-    """This function computes whether sweeping horizontally takes less move than sweeping vertically
-
-    Args:
-        max_cutter_rows: the maximum number of rows that a cutter can be assigned to,
-        max_cutter_columns: the maximum number of columns that a cutter can be assigned to,,
-        x_bounds: tuple of (x_start, x_end)
-        y_bounds: tuple of (y_start, y_end)
-        cutter_height: height of the cutter
-        cutter_width: width of the cutter
-    Returns:
-        true if horizontal sweeps takes less moves than vertical sweeps.
-    """
-    x_start, x_end = x_bounds
-    y_start, y_end = y_bounds
-
-    horizontal_sweep_distance = abs(x_end - x_start)
-    vertical_sweep_distance = abs(y_end - y_start)
-
-    # First half of the sum:
-    # Need to sweep over a total of max_cutter_rows, then if max_cutter_rows is odd
-    # we will arrive, owing to our zigzag pattern, at a different column as our starting column.
-    # To get back to our original column we would need to travese an additional horizontal_sweep_distance.
-
-    # Second half of the sum
-    # Moreover, to arrive at the next row we need to move downwards by cutter_height. We need to do this 2 times, since we
-    # also need to get back from the last row.
-    length_of_tour_horizontal = (
-        horizontal_sweep_distance * (max_cutter_rows + max_cutter_rows % 2)
-    ) + (2 * (max_cutter_rows - 1) * cutter_height)
-
-    length_of_tour_vertical = (
-        vertical_sweep_distance * (max_cutter_columns + max_cutter_columns % 2)
-        + 2 * (max_cutter_columns - 1) * cutter_width
-    )
-
-    print(length_of_tour_horizontal, length_of_tour_vertical)
-
-    return length_of_tour_horizontal > length_of_tour_vertical
-
-
-def _tour(
-    anchor_rows: list[int],
-    x_start: int,
-    x_end: int,
-    anchor_columns: list[int],
-    y_start: int,
-    y_end: int,
-    number_of_cutters: int,
-    cutter_height: int,
-    cutter_width: int,
-):
-    max_cutter_rows = ceil(len(anchor_rows) / number_of_cutters)
-    max_cutter_columns = ceil(len(anchor_columns) / number_of_cutters)
-
-    match _horizontal_more_optimal_than_vertical(
-        max_cutter_rows,
-        max_cutter_columns,
-        (x_start, x_end),
-        (y_start, y_end),
-        cutter_height,
-        cutter_width,
-    ):
-        case True:
-            tours_horizontal = []
-            for block in divide(number_of_cutters, anchor_rows):
-                tours_horizontal.append(_tour_horizontal(list(block), x_start, x_end))
-            return tours_horizontal
-        case False:
-            tours_vertical = []
-            for block in divide(number_of_cutters, anchor_columns):
-                tours_vertical.append(_tour_vertical(list(block), y_start, y_end))
-            return tours_vertical
-
 
 def _is_even(number: int):
     return (number & 1) == 0
