@@ -1,0 +1,13 @@
+[project]
+name = "py-rect-scanline-solver"
+version = "0.1.0"
+description = "Baseline solver for rectangular cutter on non-rectangular grid"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "cgshop2027-pyutils",
+    "more-itertools>=11.1.0",
+]
+
+[tool.uv.sources]
+cgshop2027-pyutils = { git = "https://github.com/CG-SHOP/pyutils27" }
