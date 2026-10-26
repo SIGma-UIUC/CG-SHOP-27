@@ -1,0 +1,19 @@
+[project]
+name = "rectangular-grid-oracle"
+version = "0.1.0"
+description = "Exact CP-SAT oracle for tiny rectangular one-cutter instances"
+requires-python = ">=3.14"
+dependencies = [
+    "cgshop2027-pyutils",
+    "ortools>=9.15,<10",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "more-itertools>=11.1.0"]
+
+[tool.uv.sources]
+cgshop2027-pyutils = { git = "https://github.com/CG-SHOP/pyutils27", rev = "e876885c171a8a74ff6601dd196a4e59948e9efb" }
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

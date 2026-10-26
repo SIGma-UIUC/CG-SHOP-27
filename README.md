@@ -64,6 +64,31 @@ This checks an existing solution against its instance; it does not generate
 routes. Replace both filenames with a matching instance/solution pair to check
 another example or your own solver's output.
 
+## Generate and verify rectangular-grid solutions
+
+From the repository root, generate solutions for every instance in
+`src/solver/rectangular_grid/examples/instances/`:
+
+```sh
+uv run --project src/solver/rectangular_grid src/solver/rectangular_grid/main.py
+```
+
+Solutions are written to `src/solver/rectangular_grid/examples/solutions/`.
+The solver checks each solution with the competition verifier before saving it.
+To independently verify all matching instance/solution pairs, run from `src/utils`
+with the environment activated:
+
+```sh
+python eval-solver.py ../solver/rectangular_grid/examples/instances ../solver/rectangular_grid/examples/solutions
+```
+
+For a complete feasible batch, this prints `=== 0 failures, 0 mismatches ===`.
+To verify just one solution:
+
+```sh
+python verify.py ../solver/rectangular_grid/examples/instances/odd_square.instance.json ../solver/rectangular_grid/examples/solutions/odd_square.solution.json
+```
+
 ## Display a solution
 
 From `src/utils`, run this as one line:

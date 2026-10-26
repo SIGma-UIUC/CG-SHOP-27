@@ -1,0 +1,54 @@
+[
+  {
+    "input": "/home/av/Projects/SIGMa/CG-SHOP-27/src/solver/rectangular_grid/examples/instances/odd_square.instance.json",
+    "instance_uid": "odd_square",
+    "algorithm": "rectangular-grid CP-SAT",
+    "status": "OPTIMAL",
+    "proved_optimal": true,
+    "objective": 10,
+    "best_bound": 10.0,
+    "wall_time_seconds": 0.013885392000000002,
+    "candidate_positions": 9,
+    "required_cells": 9,
+    "solution_file": "/home/av/Projects/SIGMa/CG-SHOP-27/src/solver/rectangular_grid/examples/solutions/odd_square.solution.json"
+  },
+  {
+    "input": "/home/av/Projects/SIGMa/CG-SHOP-27/src/solver/rectangular_grid/examples/instances/square.instance.json",
+    "instance_uid": "square",
+    "algorithm": "rectangular-grid CP-SAT",
+    "status": "OPTIMAL",
+    "proved_optimal": true,
+    "objective": 4,
+    "best_bound": 4.0,
+    "wall_time_seconds": 0.015158185000000001,
+    "candidate_positions": 16,
+    "required_cells": 9,
+    "solution_file": "/home/av/Projects/SIGMa/CG-SHOP-27/src/solver/rectangular_grid/examples/solutions/square.solution.json"
+  },
+  {
+    "input": "/home/av/Projects/SIGMa/CG-SHOP-27/src/solver/rectangular_grid/examples/instances/stationary.instance.json",
+    "instance_uid": "stationary",
+    "algorithm": "rectangular-grid CP-SAT",
+    "status": "OPTIMAL",
+    "proved_optimal": true,
+    "objective": 0,
+    "best_bound": 0.0,
+    "wall_time_seconds": 0.003320345,
+    "candidate_positions": 9,
+    "required_cells": 4,
+    "solution_file": "/home/av/Projects/SIGMa/CG-SHOP-27/src/solver/rectangular_grid/examples/solutions/stationary.solution.json"
+  },
+  {
+    "input": "/home/av/Projects/SIGMa/CG-SHOP-27/src/solver/rectangular_grid/examples/instances/strip.instance.json",
+    "instance_uid": "strip",
+    "algorithm": "rectangular-grid CP-SAT",
+    "status": "OPTIMAL",
+    "proved_optimal": true,
+    "objective": 6,
+    "best_bound": 6.0,
+    "wall_time_seconds": 0.00034324700000000003,
+    "candidate_positions": 4,
+    "required_cells": 4,
+    "solution_file": "/home/av/Projects/SIGMa/CG-SHOP-27/src/solver/rectangular_grid/examples/solutions/strip.solution.json"
+  }
+]

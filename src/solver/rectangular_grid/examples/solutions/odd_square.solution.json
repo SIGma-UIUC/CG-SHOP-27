@@ -1,0 +1,42 @@
+{
+  "content_type": "CGSHOP2027_Solution",
+  "instance_uid": "odd_square",
+  "tours": [
+    {
+      "x": [
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        2,
+        2,
+        2,
+        1
+      ],
+      "y": [
+        0,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "meta": {
+    "algorithm": "rectangular-grid CP-SAT",
+    "status": "OPTIMAL",
+    "proved_optimal": true,
+    "objective": 10,
+    "best_bound": 10.0,
+    "wall_time_seconds": 0.013885392000000002,
+    "candidate_positions": 9,
+    "required_cells": 9
+  }
+}
