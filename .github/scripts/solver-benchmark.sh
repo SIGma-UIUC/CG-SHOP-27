@@ -10,7 +10,7 @@ benchmark_python() {
     sudo systemd-run --quiet --wait --pipe --collect \
       --property="User=$(id -un)" --property="Group=$(id -gn)" --property=Delegate=yes \
       --working-directory="$PWD" --setenv="PATH=$PATH" \
-      "$(realpath "$candidate_python")" "$@"
+      "$PWD/$candidate_python" "$@"
   else
     "$candidate_python" "$@"
   fi
