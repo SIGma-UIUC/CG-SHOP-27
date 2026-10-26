@@ -1,0 +1,133 @@
+name: Solver benchmark comment
+on:
+  workflow_run:
+    workflows: [Solver benchmark]
+    types: [completed]
+permissions:
+  contents: write
+  actions: read
+  pull-requests: write
+concurrency:
+  group: benchmark-assets
+  cancel-in-progress: false
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      # Never check out or execute PR code in this privileged workflow.
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: solver-benchmark
+          path: report-data
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - uses: actions/github-script@v7
+        id: prepare
+        with:
+          script: |
+            const fs = require('fs');
+            const run = context.payload.workflow_run;
+            let prs = run.pull_requests.filter(p => p.base.repo.id === context.payload.repository.id);
+            if (prs.length === 0) {
+              const associated = await github.rest.repos.listPullRequestsAssociatedWithCommit({...context.repo, commit_sha: run.head_sha});
+              prs = associated.data.filter(p => p.head.sha === run.head_sha && p.base.repo.full_name === `${context.repo.owner}/${context.repo.repo}`);
+            }
+            if (prs.length !== 1) {
+              core.notice(`Expected one PR in this repository, found ${prs.length}. No comment posted.`);
+              return;
+            }
+            const pr = prs[0];
+            const current = await github.rest.pulls.get({...context.repo, pull_number: pr.number});
+            if (current.data.head.sha !== run.head_sha) return;
+            const marker = '<!-- solver-benchmark -->';
+            let body = `${marker}\nBenchmark: [run ${run.id}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${run.id}) at \`${run.head_sha}\`\n\n`;
+            const path = 'report-data/results.json';
+            const unavailable = reason => {
+              body += `> **Benchmark results unavailable:** ${reason}. See the linked workflow run for details.\n`;
+            };
+            let rows;
+            if (!fs.existsSync(path)) {
+              unavailable('the solver-benchmark artifact did not contain `results.json`');
+            } else if (fs.statSync(path).size >= 1000000) {
+              unavailable('`results.json` exceeded the safe size limit');
+            } else {
+              try {
+                rows = JSON.parse(fs.readFileSync(path, 'utf8'));
+                if (!Array.isArray(rows) || rows.length > 500) throw new Error('Invalid report size');
+              } catch (error) {
+                unavailable('`results.json` was invalid');
+              }
+            }
+            if (rows) {
+              if (run.conclusion !== 'success') {
+                body += `> The workflow concluded with \`${String(run.conclusion || 'unknown').replace(/[^a-z-]/g, '')}\`; the table records the failed solver evaluations.\n\n`;
+              }
+              const text = x => String(x ?? '').replace(/[^a-zA-Z0-9_ ./-]/g, '').slice(0, 120);
+              const number = x => typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x.toFixed(3) : '-';
+              const branch = 'benchmark-assets';
+              let previous;
+              try { previous = (await github.rest.git.getRef({...context.repo, ref:`heads/${branch}`})).data.object.sha; }
+              catch (e) { if (e.status !== 404) throw e; }
+              let tree = [];
+              if (previous) {
+                const commit = (await github.rest.git.getCommit({...context.repo, commit_sha:previous})).data;
+                tree = (await github.rest.git.getTree({...context.repo, tree_sha:commit.tree.sha, recursive:'1'})).data.tree;
+              }
+              const prefix = `pr-${pr.number}/`;
+              // GitHub rejects an empty tree, including reports with no GIFs.
+              const entries = [{path:'README.md', mode:'100644', type:'blob', content:'Generated solver benchmark animations.\n'}];
+              for (const entry of tree) {
+                if (!/^pr-\d+\/run-\d+\.gif$/.test(entry.path) || entry.path.startsWith(prefix)) continue;
+                const blob = (await github.rest.git.getBlob({...context.repo, file_sha:entry.sha})).data;
+                const bytes = Buffer.from(blob.content, 'base64');
+                if (bytes.length > 10000000 || !/^GIF8[79]a$/.test(bytes.subarray(0,6).toString())) continue;
+                entries.push({path:entry.path, mode:'100644', type:'blob', sha:entry.sha});
+              }
+              for (const [i,r] of rows.entries()) {
+                r.imageUrl = null;
+                if (typeof r.animation !== 'string' || !/^run-\d+\/animation\.gif$/.test(r.animation)) continue;
+                const file = `report-data/${r.animation}`;
+                if (!fs.existsSync(file) || fs.lstatSync(file).isSymbolicLink() || !fs.realpathSync(file).startsWith(fs.realpathSync('report-data') + '/')) continue;
+                if (fs.statSync(file).size > 10000000) continue;
+                const bytes = fs.readFileSync(file);
+                if (!/^GIF8[79]a$/.test(bytes.subarray(0,6).toString())) continue;
+                const dest = `${prefix}run-${i}.gif`;
+                const blob = await github.rest.git.createBlob({...context.repo, content:bytes.toString('base64'), encoding:'base64'});
+                entries.push({path:dest, mode:'100644', type:'blob', sha:blob.data.sha});
+                r.imageUrl = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/${branch}/${dest}?run=${run.id}`;
+              }
+              const newTree = await github.rest.git.createTree({...context.repo, tree:entries});
+              const commit = await github.rest.git.createCommit({...context.repo, message:`Benchmark GIFs for PR ${pr.number}`, tree:newTree.data.sha, parents:previous ? [previous] : []});
+              if (previous) await github.rest.git.updateRef({...context.repo, ref:`heads/${branch}`, sha:commit.data.sha});
+              else await github.rest.git.createRef({...context.repo, ref:`refs/heads/${branch}`, sha:commit.data.sha});
+              if (rows.length === 0) {
+                body += '> Benchmark completed without solver measurements. This usually means no solver directory changed.\n';
+              } else {
+                body += '| Solver | Instance (UID) | Status | Efficiency | Max len | Time (s) | Memory (MiB) | Animation |\n|---|---|---|---:|---:|---:|---:|---|\n';
+                let omitted = 0;
+                for (const r of rows) {
+                  const line = `| ${text(r.solver)} | ${text(r.instance)} | ${text(r.status)} | ${number(r.efficiency)} | ${number(r.max_len)} | ${number(r.time_s)} | ${number(r.memory_mib)} | ${r.imageUrl ? `<img src="${r.imageUrl}" width="220" alt="Animation">` : '-'} |\n`;
+                  if (body.length + line.length > 60000) omitted += 1;
+                  else body += line;
+                }
+                if (omitted) body += `\n> ${omitted} result${omitted === 1 ? '' : 's'} omitted only to stay within GitHub's comment-size limit; the complete report is in the workflow artifact.\n`;
+              }
+
+            }
+            fs.writeFileSync('comment.json', JSON.stringify({number:pr.number, sha:run.head_sha, body}));
+            core.setOutput('ready', 'true');
+      - uses: actions/github-script@v7
+        if: steps.prepare.outputs.ready == 'true'
+        with:
+          script: |
+            const fs = require('fs');
+            const {number, sha, body} = JSON.parse(fs.readFileSync('comment.json', 'utf8'));
+            const current = await github.rest.pulls.get({...context.repo, pull_number:number});
+            if (current.data.head.sha !== sha) return;
+            const marker = '<!-- solver-benchmark -->';
+            const comments = await github.paginate(github.rest.issues.listComments, {...context.repo, issue_number:number});
+            const old = comments.find(c => c.user.type === 'Bot' && c.body.startsWith(marker));
+            if (old) await github.rest.issues.updateComment({...context.repo, comment_id:old.id, body});
+            else await github.rest.issues.createComment({...context.repo, issue_number:number, body});

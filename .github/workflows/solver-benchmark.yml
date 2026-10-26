@@ -1,0 +1,146 @@
+name: Solver benchmark
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      large:
+        description: Include generated large stress instances
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: benchmark-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: candidate
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          path: merged
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.10'
+          enable-cache: false
+      - name: Install benchmark utilities
+        run: uv sync --frozen --project candidate/src/utils
+      - name: Enable BenchExec user namespaces on the ephemeral runner
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Check benchmark execution and memory measurement
+        uses: ./candidate/.github/actions/solver-benchmark
+        with:
+          command: check-runner
+      - name: Fetch the benchmark instances
+        env:
+          INCLUDE_LARGE: ${{ inputs.large || false }}
+        uses: ./candidate/.github/actions/solver-benchmark
+        with:
+          command: fetch-inputs
+      - name: Compute benchmark cache key
+        uses: ./candidate/.github/actions/solver-benchmark
+        with:
+          command: cache-key-pr
+      - name: Find changed solver directories
+        id: changes
+        uses: ./candidate/.github/actions/solver-benchmark
+        with:
+          command: find-changed
+      - name: Download the merged benchmark cache
+        if: github.event_name == 'pull_request' && (steps.changes.outputs.changed != '' || steps.changes.outputs.removed != '')
+        uses: actions/cache/restore@v4
+        with:
+          path: baseline.json
+          key: benchmark-baseline-pr-${{ github.run_id }}
+          restore-keys: benchmark-baseline-
+      - name: Initialize a missing baseline cache
+        if: github.event_name == 'pull_request' && (steps.changes.outputs.changed != '' || steps.changes.outputs.removed != '')
+        run: test -f baseline.json || echo '{}' > baseline.json
+      - name: Select cached merged results
+        id: cache
+        if: github.event_name == 'pull_request' && (steps.changes.outputs.changed != '' || steps.changes.outputs.removed != '')
+        uses: ./candidate/.github/actions/solver-benchmark
+        with:
+          command: select-baseline
+      - name: Install only solvers that will run
+        if: steps.changes.outputs.changed != '' || (github.event_name == 'pull_request' && steps.changes.outputs.removed != '')
+        uses: ./candidate/.github/actions/solver-benchmark
+        with:
+          command: install-solvers
+      - name: Run cache misses from the merged revision
+        id: run-merged
+        if: github.event_name == 'pull_request' && steps.cache.outputs.has-missing == 'true'
+        continue-on-error: true
+        uses: ./candidate/.github/actions/solver-benchmark
+        with:
+          command: run-merged
+      - name: Write merged baseline rows
+        if: always() && github.event_name == 'pull_request' && steps.cache.outputs.has-missing == 'true'
+        uses: ./candidate/.github/actions/solver-benchmark
+        with:
+          command: report-merged
+      - name: Run changed proposed solvers
+        id: run-proposed
+        if: steps.changes.outputs.changed != ''
+        continue-on-error: true
+        uses: ./candidate/.github/actions/solver-benchmark
+        with:
+          command: run-proposed
+      - name: Write proposed solver report
+        if: always() && steps.changes.outputs.changed != ''
+        uses: ./candidate/.github/actions/solver-benchmark
+        with:
+          command: report-proposed
+      - name: Write an empty or removed-only report
+        if: always() && steps.changes.outputs.changed == ''
+        uses: ./candidate/.github/actions/solver-benchmark
+        with:
+          command: report-empty
+      - name: Mark failed solver evaluations as failed
+        if: always() && (steps.run-merged.outcome == 'failure' || steps.run-proposed.outcome == 'failure')
+        run: exit 1
+      - name: Job summary
+        if: always() && hashFiles('benchmark-results/report.md') != ''
+        run: cat benchmark-results/report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always() && hashFiles('benchmark-results/**') != ''
+        with:
+          name: solver-benchmark
+          path: benchmark-results/
+          retention-days: 30
+  publish-baseline:
+    needs: benchmark
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.benchmark.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.10'
+          enable-cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: solver-benchmark
+          path: benchmark-results
+      - name: Build and save the merged baseline cache
+        uses: ./.github/actions/solver-benchmark
+        with:
+          command: publish-cache
+      - uses: actions/cache/save@v4
+        with:
+          path: baseline.json
+          key: benchmark-baseline-${{ github.sha }}
