@@ -65,7 +65,7 @@ for (const rows of [[], [{solver: 'candidate/example', instance: 'tiny', status:
       assert.equal(ready, 'true');
       assert.equal(comment.number, 7);
       assert.equal(comment.sha, sha);
-      assert.match(comment.body, rows.length ? /candidate\/example/ : /without solver measurements/);
+      assert.match(comment.body, rows.length ? /candidate\/example/ : /<!-- solver-benchmark -->/);
     });
   }
 }
