@@ -60,7 +60,9 @@ select_baseline() {
     "${args[@]}" --cache-key "$(cat cache-key.txt)" --output baseline-selection.json
   jq '.rows' baseline-selection.json > prior-results.json
   jq -r '.missing[]' baseline-selection.json | while IFS= read -r name; do
-    [ -d "merged/src/solver/$name" ] && echo "$name"
+    if [ -d "merged/src/solver/$name" ]; then
+      echo "$name"
+    fi
   done > missing.txt
   echo "has-missing=$([ -s missing.txt ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 }
@@ -110,6 +112,7 @@ case "${1:-}" in
   run-merged) run_solvers merged merged/src/solver missing.txt merged-dumps ;;
   report-merged)
     "$candidate_python" candidate/src/utils/benchmark-report.py --dumps merged-dumps \
+      --prior-results prior-results.json \
       --manifest benchmark-inputs/manifest.json --output merged-results
     cp merged-results/results.json prior-results.json
     ;;
