@@ -8,6 +8,7 @@ INSTANCES = Path(__file__).parent / "../../examples/test_instances1"
 
 
 def main() -> None:
+    """Write one solution per instance in the input directory."""
     parser = argparse.ArgumentParser()
     parser.add_argument("output", type=Path)
     parser.add_argument("--instances", type=Path, default=INSTANCES)
