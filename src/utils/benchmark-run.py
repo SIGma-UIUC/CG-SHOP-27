@@ -75,8 +75,12 @@ def run(command, timeout, log, cwd=None):
     if sys.platform != 'linux':
         return portable_run(command, timeout, log, cwd)
     from benchexec.runexecutor import RunExecutor
+    from benchexec.container import DIR_FULL_ACCESS
     try:
-        result = RunExecutor().execute_run(args=command, output_filename=str(log),
+        # Inputs and outputs live in host temporary directories. Keep these
+        # visible and persist writes instead of hiding them in an overlay.
+        executor = RunExecutor(dir_modes={'/': DIR_FULL_ACCESS}, container_system_config=False)
+        result = executor.execute_run(args=command, output_filename=str(log),
                                            workingDir=str(cwd) if cwd else None,
                                            walltimelimit=timeout, write_header=False)
     except Exception as error:

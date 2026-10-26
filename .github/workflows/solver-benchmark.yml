@@ -34,6 +34,12 @@ jobs:
           enable-cache: false
       - name: Install benchmark utilities
         run: uv sync --frozen --project candidate/src/utils
+      - name: Enable BenchExec user namespaces on the ephemeral runner
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Check benchmark execution and memory measurement
+        uses: ./candidate/.github/actions/solver-benchmark
+        with:
+          command: check-runner
       - name: Fetch the benchmark instances
         env:
           INCLUDE_LARGE: ${{ inputs.large || false }}

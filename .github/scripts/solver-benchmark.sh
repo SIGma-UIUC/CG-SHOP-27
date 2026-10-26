@@ -4,6 +4,18 @@ set -euo pipefail
 
 candidate_python='candidate/src/utils/.venv/bin/python'
 
+benchmark_python() {
+  if [ "${GITHUB_ACTIONS:-false}" = true ]; then
+    # Give BenchExec its own delegated cgroup while keeping execution unprivileged.
+    sudo systemd-run --quiet --wait --pipe --collect \
+      --property="User=$(id -un)" --property="Group=$(id -gn)" --property=Delegate=yes \
+      --working-directory="$PWD" --setenv="PATH=$PATH" \
+      "$(realpath "$candidate_python")" "$@"
+  else
+    "$candidate_python" "$@"
+  fi
+}
+
 fetch_inputs() {
   local args=()
   [ "${INCLUDE_LARGE:-false}" = true ] && args+=(--large)
@@ -82,7 +94,7 @@ run_solvers() {
   local label=$1 root=$2 names=$3 output=$4
   local args=()
   while IFS= read -r name; do [ -n "$name" ] && args+=(--solver "$name"); done < "$names"
-  "$candidate_python" candidate/src/utils/benchmark-run.py benchmark-inputs/instances \
+  benchmark_python candidate/src/utils/benchmark-run.py benchmark-inputs/instances \
     --solver-root "$label=$root" "${args[@]}" --timeout 30 --animate --output "$output"
 }
 
@@ -104,6 +116,7 @@ publish_cache() {
 }
 
 case "${1:-}" in
+  check-runner) benchmark_python candidate/src/utils/benchmark-smoke.py ;;
   fetch-inputs) fetch_inputs ;;
   cache-key-pr) cache_key benchmark-inputs/manifest.json candidate ;;
   find-changed) find_changed ;;
@@ -120,5 +133,5 @@ case "${1:-}" in
   report-proposed) write_report benchmark-dumps ;;
   report-empty) write_report ;;
   publish-cache) publish_cache ;;
-  *) echo "usage: $0 {fetch-inputs|cache-key-pr|find-changed|select-baseline|install-solvers|run-merged|report-merged|run-proposed|report-proposed|report-empty|publish-cache}" >&2; exit 2 ;;
+  *) echo "usage: $0 {check-runner|fetch-inputs|cache-key-pr|find-changed|select-baseline|install-solvers|run-merged|report-merged|run-proposed|report-proposed|report-empty|publish-cache}" >&2; exit 2 ;;
 esac
