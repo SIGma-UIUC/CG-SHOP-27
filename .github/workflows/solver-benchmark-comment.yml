@@ -76,7 +76,8 @@ jobs:
                 tree = (await github.rest.git.getTree({...context.repo, tree_sha:commit.tree.sha, recursive:'1'})).data.tree;
               }
               const prefix = `pr-${pr.number}/`;
-              const entries = [];
+              // GitHub rejects an empty tree, including reports with no GIFs.
+              const entries = [{path:'README.md', mode:'100644', type:'blob', content:'Generated solver benchmark animations.\n'}];
               for (const entry of tree) {
                 if (!/^pr-\d+\/run-\d+\.gif$/.test(entry.path) || entry.path.startsWith(prefix)) continue;
                 const blob = (await github.rest.git.getBlob({...context.repo, file_sha:entry.sha})).data;
