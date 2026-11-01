@@ -20,7 +20,7 @@ fetch_inputs() {
   local args=()
   [ "${INCLUDE_LARGE:-false}" = true ] && args+=(--large)
   "$candidate_python" candidate/src/utils/benchmark-instances.py \
-    merged/src/examples/test_instances1 --sample 15 "${args[@]}" --output benchmark-inputs
+    candidate/src/examples/benchmark_instances --sample 0 "${args[@]}" --output benchmark-inputs
 }
 
 cache_key() {

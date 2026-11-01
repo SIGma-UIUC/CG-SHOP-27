@@ -147,7 +147,8 @@ are excluded from the timings:
 ```sh
 uv sync --frozen --project src/utils
 uv sync --frozen --project src/solver/py-bounding-rect-solver
-uv run --no-sync --project src/utils python src/utils/benchmark-instances.py src/examples/test_instances1 --output benchmark-inputs
+uv sync --frozen --project src/solver/rectangular_grid
+uv run --no-sync --project src/utils python src/utils/benchmark-instances.py src/examples/benchmark_instances --sample 0 --output benchmark-inputs
 uv run --no-sync --project src/utils python src/utils/benchmark-run.py benchmark-inputs/instances --solver-root proposed=src/solver --timeout 30 --animate --output benchmark-dumps
 uv run --no-sync --project src/utils python src/utils/benchmark-report.py --dumps benchmark-dumps --manifest benchmark-inputs/manifest.json --output benchmark-results
 ```
@@ -158,9 +159,9 @@ instance selection, solver measurement, or report generation. Open
 the report artifact, publishes GIFs, and updates the PR comment. Generated
 reports, logs, solutions, and animations are not committed.
 
-- The default solver benchmark uses 15 fixed instances spanning multiple field
-  sizes and families. `BENCHMARK_INSTANCES` names the exact files, and the
-  fetched `manifest.json` records their UIDs and input hashes.
+- The workflow benchmarks both tiny rectangular instances in
+  `src/examples/benchmark_instances`, which both solvers support.
+  The fetched `manifest.json` records their UIDs and input hashes.
 - Coverage efficiency is **field area divided by length-balanced swept area**.
   For each moving cutter, its swept area is multiplied by the ratio of the
   longest tour length to that cutter's tour length, and these weighted areas are
@@ -184,7 +185,8 @@ reports, logs, solutions, and animations are not committed.
 
 Use `--sample 0` on `benchmark-instances.py` for all examples. Add `--large`
 there for generated square fields of side 256, 1024, and 4096 with three 4-by-4
-cutters. These stress grid size and route length, but do not replace
+cutters. These are outside the rectangular-grid solver's supported scope.
+They stress grid size and route length, but do not replace
 irregular/holey examples. To compare another checkout on the exact same inputs,
 repeat `--solver-root`, for example `--solver-root merged=../merged/src/solver
 --solver-root proposed=src/solver`. Install each checkout's solver environments
@@ -193,11 +195,35 @@ first.
 The original `eval-solver.py INSTANCES SOLUTIONS` command still validates saved
 solutions, with no invented timing or memory measurements.
 
+### Change benchmark inputs
+
+Add, edit, or remove `*.instance.json` files in
+`src/examples/benchmark_instances/`. The workflow uses every instance in that
+directory (`--sample 0`), so there is no filename list to update. This is a
+shared suite for all solvers; choose cases supported by the solvers being compared.
+The existing `BENCHMARK_INSTANCES` list in `benchmark-instances.py` is only used
+with `--sample 15`, not by this workflow.
+
+Validate locally with the benchmark commands above, using fresh output directories.
+Because `src/examples` is ignored by Git, force-add any new benchmark files:
+
+```sh
+git add -f src/examples/benchmark_instances/NEW_CASE.instance.json
+```
+
+Commit the input changes on your branch. PR runs evaluate changed solver
+directories only, so a PR that changes just the inputs does not rerun solvers.
+Use **Actions → Solver benchmark → Run workflow** on your branch to evaluate all
+solvers, or let the push to `main` run after merging. Leave `large` disabled for
+the tiny rectangular solver. Changed input hashes invalidate cached baseline
+results automatically.
+
 ### PR reports
 
-The benchmark workflow evaluates changed proposed solvers on the fixed 15
-instances. It reuses a verified baseline from the latest `main` benchmark when
-its solver fingerprint, instance manifest, evaluator, and configuration match.
+The benchmark workflow evaluates changed proposed solvers on the two shared
+tiny rectangular instances. It reuses a verified baseline from the latest `main`
+benchmark when its solver fingerprint, instance manifest, evaluator, and
+configuration match.
 Otherwise it measures the relevant merged solver. Its job summary and
 downloadable `solver-benchmark` artifact contain the table and GIFs. The PR
 comment contains the table, the tested commit SHA, and a link to the workflow
