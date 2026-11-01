@@ -8,6 +8,8 @@ INSTANCES = Path(__file__).parent / "../../examples/test_instances1"
 
 
 def main() -> None:
+    """Write one solution per instance in the input directory."""
+    # The benchmark invokes this entry point once for each sampled instance.
     parser = argparse.ArgumentParser()
     parser.add_argument("output", type=Path)
     parser.add_argument("--instances", type=Path, default=INSTANCES)

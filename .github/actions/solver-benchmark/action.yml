@@ -1,0 +1,22 @@
+name: Solver benchmark helper
+description: Run one checked-in solver benchmark command.
+inputs:
+  command:
+    description: Command accepted by solver-benchmark.sh.
+    required: true
+outputs:
+  changed:
+    description: Comma-separated changed solver directory names.
+    value: ${{ steps.command.outputs.changed }}
+  removed:
+    description: Comma-separated removed solver directory names.
+    value: ${{ steps.command.outputs.removed }}
+  has-missing:
+    description: Whether merged solver measurements are missing from the cache.
+    value: ${{ steps.command.outputs.has-missing }}
+runs:
+  using: composite
+  steps:
+    - id: command
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/../../scripts/solver-benchmark.sh" "${{ inputs.command }}"
