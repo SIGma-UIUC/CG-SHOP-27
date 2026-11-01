@@ -1,0 +1,22 @@
+{
+  "content_type": "CGSHOP2027_Instance",
+  "instance_uid": "exact-ring-3x3",
+  "region_to_cover": {
+    "outer_boundary": {
+      "x": [0, 3, 3, 0],
+      "y": [0, 0, 3, 3]
+    },
+    "inner_boundaries": [
+      {
+        "x": [1, 1, 2, 2],
+        "y": [1, 2, 2, 1]
+      }
+    ]
+  },
+  "cutter": {
+    "x": [0, 1, 1, 0],
+    "y": [0, 0, 1, 1]
+  },
+  "cutter_center": [0, 0],
+  "number_of_cutters": 1
+}

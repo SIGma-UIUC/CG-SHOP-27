@@ -1,0 +1,17 @@
+{
+  "content_type": "CGSHOP2027_Instance",
+  "instance_uid": "exact-l-shape-12",
+  "region_to_cover": {
+    "outer_boundary": {
+      "x": [0, 4, 4, 2, 2, 0],
+      "y": [0, 0, 2, 2, 4, 4]
+    },
+    "inner_boundaries": []
+  },
+  "cutter": {
+    "x": [0, 2, 2, 0],
+    "y": [0, 0, 1, 1]
+  },
+  "cutter_center": [1, 0],
+  "number_of_cutters": 1
+}

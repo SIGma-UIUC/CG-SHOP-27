@@ -1,0 +1,1 @@
+{"content_type":"CGSHOP2027_Solution","instance_uid":"random_k1_seed3071_30region_10cutter_cells","tours":[{"x":[16,16,18,10,13,13],"y":[16,15,15,15,15,16]}],"meta":{"algorithm":"rectangular_cutter_cp_sat","status":"OPTIMAL","optimal":true,"best_bound":18.0,"solve_seconds":14.11862787500013}}

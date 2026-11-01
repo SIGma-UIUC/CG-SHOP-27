@@ -1,0 +1,27 @@
+{
+  "content_type": "CGSHOP2027_Solution",
+  "instance_uid": "rectangle_random_k1_seed2041_30region_9cutter_cells",
+  "tours": [
+    {
+      "x": [
+        1,
+        3,
+        3,
+        1
+      ],
+      "y": [
+        4,
+        4,
+        1,
+        1
+      ]
+    }
+  ],
+  "meta": {
+    "algorithm": "rectangular_cutter_cp_sat",
+    "status": "OPTIMAL",
+    "optimal": true,
+    "best_bound": 10.0,
+    "solve_seconds": 6.420739875000436
+  }
+}

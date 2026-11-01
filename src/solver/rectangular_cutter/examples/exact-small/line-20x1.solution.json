@@ -1,0 +1,1 @@
+{"content_type":"CGSHOP2027_Solution","instance_uid":"exact-line-20x1-one-cell-cutter","tours":[{"x":[0,19],"y":[0,0]}],"meta":{"algorithm":"rectangular_cutter_cp_sat","status":"OPTIMAL","optimal":true,"best_bound":38.0,"solve_seconds":0.4419864579977002}}

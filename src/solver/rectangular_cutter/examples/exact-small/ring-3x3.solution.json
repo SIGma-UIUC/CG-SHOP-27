@@ -1,0 +1,1 @@
+{"content_type":"CGSHOP2027_Solution","instance_uid":"exact-ring-3x3","tours":[{"x":[2,2,0,0],"y":[0,2,2,0]}],"meta":{"algorithm":"rectangular_cutter_cp_sat","status":"OPTIMAL","optimal":true,"best_bound":8.0,"solve_seconds":0.0447561670007417}}

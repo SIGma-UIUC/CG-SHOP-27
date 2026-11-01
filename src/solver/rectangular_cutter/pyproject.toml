@@ -1,0 +1,13 @@
+[project]
+name = "rectangular-cutter-exact-solver"
+version = "0.1.0"
+description = "A small exact CP-SAT solver for one rectangular cutter"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "cgshop2027-pyutils",
+    "ortools>=9.14",
+]
+
+[tool.uv.sources]
+cgshop2027-pyutils = { git = "https://github.com/CG-SHOP/pyutils27" }

@@ -56,6 +56,14 @@ def solve(instance: CGSHOP2027Instance) -> CGSHOP2027Solution:
 
 
 def tour(anchor_rows: list[int], x_start: int, x_end: int) -> CutterTour:
-    points = list(unique_justseen(flatten(
-                  ((x_start, y), (x_end, y), (x_start, y)) for y in anchor_rows)))
+    points = list(
+        unique_justseen(
+            flatten(
+                ((x_start, y), (x_end, y), (x_start, y))
+                for y in anchor_rows
+            )
+        )
+    )
+    if len(points) > 1 and points[-1] == points[0]:
+        points.pop()
     return CutterTour(x=[x for x, _ in points], y=[y for _, y in points])

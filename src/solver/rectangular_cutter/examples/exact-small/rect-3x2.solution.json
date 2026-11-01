@@ -1,0 +1,1 @@
+{"content_type":"CGSHOP2027_Solution","instance_uid":"exact-rect-3x2","tours":[{"x":[1,2,2,1],"y":[0,0,1,1]}],"meta":{"algorithm":"rectangular_cutter_cp_sat","status":"OPTIMAL","optimal":true,"best_bound":4.0,"solve_seconds":0.03435337499831803}}

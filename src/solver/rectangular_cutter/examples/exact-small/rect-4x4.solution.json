@@ -1,0 +1,1 @@
+{"content_type":"CGSHOP2027_Solution","instance_uid":"exact-rect-4x4","tours":[{"x":[1,1,3,3],"y":[0,3,3,0]}],"meta":{"algorithm":"rectangular_cutter_cp_sat","status":"OPTIMAL","optimal":true,"best_bound":10.0,"solve_seconds":1.0905594999931054}}
