@@ -34,6 +34,8 @@ jobs:
           enable-cache: false
       - name: Install benchmark utilities
         run: uv sync --frozen --project candidate/src/utils
+      - name: Test benchmark input selection and reporting
+        run: candidate/src/utils/.venv/bin/python -m unittest discover -s candidate/src/utils -p test_benchmark_pipeline.py
       - name: Enable BenchExec user namespaces on the ephemeral runner
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: Check benchmark execution and memory measurement

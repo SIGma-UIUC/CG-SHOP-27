@@ -170,8 +170,36 @@ solutions, with no invented timing or memory measurements.
 
 ### PR reports
 
+Solvers can optionally select their own benchmark instances in their
+`pyproject.toml`:
+
+```toml
+[tool.sigma.benchmark]
+instances = "examples/instances"
+```
+
+The path is relative to that solver's directory and must remain inside it.
+Every `*.instance.json` file directly in the directory is evaluated. Missing or
+empty directories are configuration errors; they do not fall back to the
+competition set. Instance UIDs must be unique within a suite.
+
+To change a solver's benchmarks, edit this setting or add/remove fixtures in
+the configured directory, commit them with the solver, and update its PR.
+These changes trigger the existing solver comparison and invalidate its cached
+baseline. Keep the fixtures in Git; if an ignore rule hides them, use
+`git add -f PATH`. Remove the setting to return to the shared competition set.
+The same setting works with local `benchmark-run.py` commands; its positional
+instances directory supplies the default only for solvers without an override.
+
+The runner records a SHA-256 for each input and a suite identifier derived from
+the complete set of UIDs and input hashes. `leaderboard.json` contains one
+ranking per suite, so solvers running different cases are never ranked against
+each other. Candidate and merged revisions share a ranking only when their
+inputs match. All cases still appear in the report table, including failures.
+
 The benchmark workflow evaluates changed proposed solvers on the fixed 15
-instances. It reuses a verified baseline from the latest `main` benchmark when
+instances by default, or on each solver's configured instances. It reuses a
+verified baseline from the latest `main` benchmark when
 its solver fingerprint, instance manifest, evaluator, and configuration match.
 Otherwise it measures the relevant merged solver. Its job summary and
 downloadable `solver-benchmark` artifact contain the table and GIFs. The PR
@@ -182,7 +210,8 @@ many rows were omitted and the complete report remains in the workflow
 artifact. GIFs are publicly embedded from the repository's
 `benchmark-assets` branch.
 Manual workflow dispatches retain the `large` input, which adds the three
-generated stress instances to both the manifest and the measured solver runs.
+generated stress instances to the default manifest and to runs without a
+solver-specific override.
 Solvers with other languages can expose the same Python CLI wrapper, but their
 build dependencies must be installed before evaluation.
 
