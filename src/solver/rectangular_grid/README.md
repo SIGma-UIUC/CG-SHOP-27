@@ -11,6 +11,14 @@ neither the cutter nor its center is constrained to stay inside the lawn.
 A stationary cutter is a valid zero-length solution. Nonrectangular shapes,
 holes, and multiple cutters are rejected, never approximated by bounding boxes.
 
+## Benchmark instances
+
+The solver's `pyproject.toml` selects `examples/instances` for the shared
+benchmark runner. CI therefore evaluates all four bundled tiny cases for this
+solver, while solvers without an override keep the default competition set.
+Add, edit, or remove `*.instance.json` files in that directory to change this
+solver's benchmark suite.
+
 ## Run
 
 From this directory, with Python 3.14+ and `uv`:

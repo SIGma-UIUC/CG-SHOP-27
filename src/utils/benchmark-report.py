@@ -11,6 +11,7 @@ PUBLIC_FIELDS = {
     'solver', 'instance', 'status', 'efficiency', 'max_len', 'time_s',
     'memory_mib', 'swept_area', 'per_tour_swept_areas', 'tour_lengths',
     'cutters', 'area', 'animation', 'animation_status', 'errors',
+    'benchmark_suite', 'instance_sha256',
 }
 
 
@@ -31,6 +32,25 @@ def public_row(row):
 
 
 def report(rows, output):
+    # Rank only solvers that ran the same complete set of UID/content pairs.
+    suites = {}
+    for row in rows:
+        suites.setdefault(row.get('benchmark_suite', 'legacy'), []).append(row)
+    boards = []
+    for suite, group in sorted(suites.items()):
+        boards.append({'suite': suite, 'instances': sorted({row['instance'] for row in group}),
+                       'ranking': rank(group)})
+    (output / 'leaderboard.json').write_text(json.dumps(boards, indent=2) + '\n')
+    lines = ['| Solver | Instance (UID) | Status | Efficiency | Max len | Time (s) | Memory (MiB) | Animation |', '|---|---|---:|---:|---:|---:|---:|---|']
+    for row in rows:
+        number = lambda key: '-' if row.get(key) is None else f"{row[key]:.3f}"
+        lines.append(f"| {row['solver']} | {row['instance']} | {row['status']} | {number('efficiency')} | {number('max_len')} | {number('time_s')} | {number('memory_mib')} | {'yes' if row.get('animation') else '-'} |")
+    if len(boards) > 1:
+        lines.extend(['', 'Solvers using different instance sets are ranked separately in leaderboard.json.'])
+    (output / 'report.md').write_text('\n'.join(lines) + '\n')
+
+
+def rank(rows):
     best = {}
     for row in rows:
         if row['status'] == 'valid' and isinstance(row.get('max_len'), (int, float)):
@@ -41,12 +61,7 @@ def report(rows, output):
         valid = [row for row in group if row['status'] == 'valid' and isinstance(row.get('max_len'), (int, float))]
         score = sum(1 if row['max_len'] == 0 else best[row['instance']] / row['max_len'] for row in valid) / len(group)
         leaderboard.append((len(valid), score, solver, len(group)))
-    (output / 'leaderboard.json').write_text(json.dumps(sorted(leaderboard, key=lambda r: (-r[0], -r[1], r[2])), indent=2) + '\n')
-    lines = ['| Solver | Instance (UID) | Status | Efficiency | Max len | Time (s) | Memory (MiB) | Animation |', '|---|---|---:|---:|---:|---:|---:|---|']
-    for row in rows:
-        number = lambda key: '-' if row.get(key) is None else f"{row[key]:.3f}"
-        lines.append(f"| {row['solver']} | {row['instance']} | {row['status']} | {number('efficiency')} | {number('max_len')} | {number('time_s')} | {number('memory_mib')} | {'yes' if row.get('animation') else '-'} |")
-    (output / 'report.md').write_text('\n'.join(lines) + '\n')
+    return sorted(leaderboard, key=lambda r: (-r[0], -r[1], r[2]))
 
 
 def load_rows(dumps, prior_results):

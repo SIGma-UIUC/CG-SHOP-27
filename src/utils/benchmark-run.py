@@ -1,6 +1,7 @@
 """Run solvers on benchmark instances and write measurements and diagnostics."""
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -11,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 
 import psutil
 
@@ -291,13 +293,49 @@ def animate_candidate(row, source, directory, script, output):
         row['animation'] = gif.relative_to(output).as_posix()
 
 
-def evaluate(solvers, paths, args, out):
+def solver_instance_paths(folder, default_paths):
+    """Use a solver-local suite when configured, otherwise the shared inputs."""
+    with (folder / 'pyproject.toml').open('rb') as stream:
+        config = tomllib.load(stream)
+    for key in ('tool', 'sigma', 'benchmark'):
+        config = config.get(key, {})
+        if not isinstance(config, dict):
+            raise ValueError(f'{folder.name}: tool.sigma.benchmark must be a TOML table')
+    directory = config.get('instances')
+    if directory is None:
+        paths = default_paths
+    else:
+        if not isinstance(directory, str) or not directory.strip() or Path(directory).is_absolute():
+            raise ValueError(f'{folder.name}: benchmark instances must be a relative directory')
+        source = (folder / directory).resolve()
+        if not source.is_relative_to(folder.resolve()):
+            raise ValueError(f'{folder.name}: benchmark instances must stay inside the solver directory')
+        if not source.is_dir():
+            raise ValueError(f'{folder.name}: benchmark instances directory does not exist: {directory}')
+        paths = sorted(source.glob('*.instance.json'))
+    if not paths:
+        raise ValueError(f'{folder.name}: no benchmark instances found')
+    return paths
+
+
+def instance_manifest(paths):
+    manifest = [{'uid': json.loads(path.read_text())['instance_uid'],
+                 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()} for path in paths]
+    if len({entry['uid'] for entry in manifest}) != len(manifest):
+        raise ValueError('Benchmark instance UIDs must be unique within each solver suite')
+    return manifest
+
+
+def evaluate(plans, args, out):
     rows = []
     script = str(Path(__file__).resolve())
     (out / 'raw-results.json').write_text('[]\n')
-    for solver, folder in solvers:
-        for source in paths:
+    for solver, folder, paths, manifest in plans:
+        suite = hashlib.sha256(json.dumps(sorted(manifest, key=lambda entry: entry['uid']),
+                                          sort_keys=True).encode()).hexdigest()
+        for source, entry in zip(paths, manifest):
             row = evaluate_instance(solver, folder, source, args, out, script, len(rows))
+            row.update(benchmark_suite=suite, instance_sha256=entry['sha256'])
             rows.append(row)
             print(f"{solver} {row['instance']}: {row['status']}", flush=True)
             (out / 'raw-results.json').write_text(json.dumps(rows, indent=2, allow_nan=False) + '\n')
@@ -311,11 +349,16 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     args.instances = args.instances.resolve()
     paths = sorted(args.instances.glob('*.instance.json'))
-    if not paths:
-        parser.error('No instances found')
     solvers = discover_solvers(args, parser)
+    plans = []
+    try:
+        for solver, folder in solvers:
+            selected = solver_instance_paths(folder, paths)
+            plans.append((solver, folder, selected, instance_manifest(selected)))
+    except (ValueError, OSError) as error:
+        parser.error(str(error))
     write_environment(out, args, solvers)
-    evaluate(solvers, paths, args, out)
+    evaluate(plans, args, out)
     rows = json.loads((out / 'raw-results.json').read_text())
     return 1 if any(row['status'] != 'valid' for row in rows) else 0
 

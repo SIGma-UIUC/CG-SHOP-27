@@ -17,3 +17,6 @@ cgshop2027-pyutils = { git = "https://github.com/CG-SHOP/pyutils27", rev = "e876
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.sigma.benchmark]
+instances = "examples/instances"
