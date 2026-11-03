@@ -15,17 +15,14 @@ from cgshop2027_pyutils.verify import SolutionValidator
 def generate_tours(
     instance: CGSHOP2027Instance, validator: SolutionValidator
 ) -> list[CutterTour]:
-    """TODO: return one closed tour per cutter that collectively cover the region.
-    """
+    """TODO: return one closed tour per cutter that collectively cover the region."""
     raise NotImplementedError("Implement generate_tours() with your algorithm.")
 
 
 def solve(instance: CGSHOP2027Instance) -> CGSHOP2027Solution:
     validator = SolutionValidator(instance)
     tours = generate_tours(instance, validator)
-    solution = CGSHOP2027Solution(
-        instance_uid=instance.instance_uid,
-        tours=tours)
+    solution = CGSHOP2027Solution(instance_uid=instance.instance_uid, tours=tours)
 
     # Schema validation checks the format; this checks coverage and tour count.
     errors = validator.check_for_errors(solution)
