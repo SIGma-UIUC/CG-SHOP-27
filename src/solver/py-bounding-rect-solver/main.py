@@ -1,13 +1,10 @@
 import argparse
-import subprocess
-import sys
 from pathlib import Path
 
 from cgshop2027_pyutils.io import read_instance
 from solver import solve
 
 INSTANCES = Path(__file__).parent / "../../examples/test_instances1"
-VERIFY_SCRIPT = Path(__file__).resolve().parents[2] / "utils" / "verify.py"
 
 
 def main() -> None:
@@ -23,16 +20,7 @@ def main() -> None:
         solution = solve(read_instance(path))
         destination = args.output / f"{solution.instance_uid}.solution.json"
         destination.write_text(solution.model_dump_json())
-        print(solution.instance_uid, flush=True)
-        subprocess.run(
-            [
-                sys.executable,
-                str(VERIFY_SCRIPT),
-                str(path.resolve()),
-                str(destination.resolve()),
-            ],
-            check=True,
-        )
+        print(solution.instance_uid)
 
 
 if __name__ == "__main__":

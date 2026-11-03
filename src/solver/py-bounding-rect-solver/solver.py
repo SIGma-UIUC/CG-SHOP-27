@@ -9,7 +9,7 @@ from cgshop2027_pyutils.schemas import (
     CutterTour,
 )
 
-class Rec(NamedTuple):
+class Rect(NamedTuple):
     """
     A rectangle object described by the distance of the left, bottom, right, top edges from the center
     """
@@ -79,8 +79,8 @@ def solve(instance: CGSHOP2027Instance) -> CGSHOP2027Solution:
     """
     number_of_cutters = instance.number_of_cutters
     boundary = instance.region_to_cover.outer_boundary
-    lawn = Rec.enclosing(boundary.x, boundary.y)
-    cutter = Rec.enclosing(
+    lawn = Rect.enclosing(boundary.x, boundary.y)
+    cutter = Rect.enclosing(
         instance.cutter.x, instance.cutter.y, instance.cutter_center
     )
 
