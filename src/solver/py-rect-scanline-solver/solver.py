@@ -34,6 +34,50 @@ class Rect(NamedTuple):
             max(ys) - 1 - offset_y,
         )
 
+def compute_rect_cutter(cutter, cutter_center):
+    n = len(cutter.x)
+    rows = {}
+    
+    for j in range(n):
+        x1, y1 = cutter.x[j], cutter.y[j]
+        x2, y2 = cutter.x[(j + 1) % n], cutter.y[(j + 1) % n]
+
+        if y1 == y2:
+            continue
+
+        for row in range(min(y1, y2), max(y1, y2)):
+            if row not in rows:
+                rows[row] = []
+            rows[row].append(x1)
+
+    filled = set()
+    for row, xs in rows.items():
+        xs.sort()
+        for k in range(0, len(xs), 2):
+            for x in range(xs[k], xs[k + 1]):
+                filled.add((x, row))
+
+    best = (0, 0, 0, 0)
+    best_area = 0
+    min_col = min(x for x, y in filled)
+    max_col = max(x for x, y in filled)
+    min_row = min(y for x, y in filled)
+    max_row = max(y for x, y in filled)
+
+    for left in range(min_col, max_col + 1):
+        for right in range(left, max_col + 1):
+            for bottom in range(min_row, max_row + 1):
+                for top in range(bottom, max_row + 1):
+                    area = (right - left + 1) * (top - bottom + 1)
+                    if area <= best_area:
+                        continue
+                    if all((c, r) in filled
+                        for c in range(left, right + 1)
+                        for r in range(bottom, top + 1)):
+                        best, best_area = (left, bottom, right, top), area
+    return Rect(best[0] - cutter_center[0], best[1] - cutter_center[1], best[2] - cutter_center[0], best[3] - cutter_center[1])
+        
+
 def row_spans(boundary):
     n = len(boundary.x)
     spans = {}
@@ -67,12 +111,9 @@ def band_sweep(spans, anchor_y, cutter) -> tuple[int, int] | None:
     return (start, end)
 
 def solve(instance: CGSHOP2027Instance) -> CGSHOP2027Solution:
-    if len(instance.cutter.x) != 4:
-        raise ValueError(f"{instance.instance_uid}: Non-rectangular cutter")
-
     boundary = instance.region_to_cover.outer_boundary
     lawn = Rect.enclosing(boundary.x, boundary.y)
-    cutter = Rect.enclosing(instance.cutter.x, instance.cutter.y, instance.cutter_center)
+    cutter = compute_rect_cutter(instance.cutter, instance.cutter_center)
 
     strip_count = max(ceil(lawn.height / cutter.height), instance.number_of_cutters)
     anchor_rows = [lawn.top - cutter.top - i * cutter.height for i in range(strip_count)]

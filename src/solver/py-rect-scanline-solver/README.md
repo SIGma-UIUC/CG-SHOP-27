@@ -1,6 +1,6 @@
 ## Description
 
-This solver assumes a rectangular cutter and trims each horizontal strip to the part of the lawn it needs to cover, with each cutter snaking through its strips of the lawn.
+This solver assumes a rectangular cutter, handling other cutter shapes by computing the largest inscribed rectangle in the cutter. and trims each horizontal strip to the part of the lawn it needs to cover, with each cutter snaking through its strips of the lawn.
 
 ## Building and Running
 
