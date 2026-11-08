@@ -2,7 +2,7 @@ from math import ceil
 from typing import NamedTuple, Self
 from types import SimpleNamespace
 
-from more_itertools import divide, unique_justseen
+from more_itertools import unique_justseen
 
 from cgshop2027_pyutils.schemas import (
     CGSHOP2027Instance,
@@ -146,9 +146,27 @@ def sweep_tours(boundary, cutter_shape, center, number_of_cutters) -> list[Cutte
         bands.append((row, sweep[0], sweep[1]))
 
     tours = []
-    for block in divide(number_of_cutters, bands):
+    for block in split_bands(bands, number_of_cutters):
         tours.append(tour(list(block)))
     return tours
+
+
+def split_bands(bands, k):
+    weights = [end - start + 1 for _, start, end in bands]
+    target = sum(weights) / k
+
+    blocks = [[]]
+    load = 0
+    for band, w in zip(bands, weights):
+        if blocks[-1] and load >= target and len(blocks) < k:
+            blocks.append([])
+            load = 0
+        blocks[-1].append(band)
+        load += w
+
+    while len(blocks) < k:
+        blocks.append([])
+    return blocks
 
 
 def tour(bands: list[tuple[int, int, int]]) -> CutterTour:
