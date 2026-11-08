@@ -62,7 +62,7 @@ def compute_rect_cutter(cutter, cutter_center):
                 filled.add((x, row))
 
     best = (0, 0, 0, 0)
-    best_area = 0
+    best_rect = (0, 0)
     min_col = min(x for x, y in filled)
     max_col = max(x for x, y in filled)
     min_row = min(y for x, y in filled)
@@ -72,13 +72,13 @@ def compute_rect_cutter(cutter, cutter_center):
         for right in range(left, max_col + 1):
             for bottom in range(min_row, max_row + 1):
                 for top in range(bottom, max_row + 1):
-                    area = (right - left + 1) * (top - bottom + 1)
-                    if area <= best_area:
+                    curr = (top - bottom + 1, right - left + 1)
+                    if curr <= best_rect:
                         continue
                     if all((c, r) in filled
                         for c in range(left, right + 1)
                         for r in range(bottom, top + 1)):
-                        best, best_area = (left, bottom, right, top), area
+                        best, best_rect = (left, bottom, right, top), curr
     return Rect(best[0] - cutter_center[0], best[1] - cutter_center[1], best[2] - cutter_center[0], best[3] - cutter_center[1])
         
 
