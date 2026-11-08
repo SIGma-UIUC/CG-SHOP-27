@@ -1,5 +1,6 @@
 from math import ceil
 from typing import NamedTuple, Self
+from types import SimpleNamespace
 
 from more_itertools import divide, unique_justseen
 
@@ -33,6 +34,9 @@ class Rect(NamedTuple):
             max(xs) - 1 - offset_x,
             max(ys) - 1 - offset_y,
         )
+
+def transpose(shape):
+    return SimpleNamespace(x=shape.y, y=shape.x)
 
 def compute_rect_cutter(cutter, cutter_center):
     n = len(cutter.x)
@@ -112,10 +116,25 @@ def band_sweep(spans, anchor_y, cutter) -> tuple[int, int] | None:
 
 def solve(instance: CGSHOP2027Instance) -> CGSHOP2027Solution:
     boundary = instance.region_to_cover.outer_boundary
-    lawn = Rect.enclosing(boundary.x, boundary.y)
-    cutter = compute_rect_cutter(instance.cutter, instance.cutter_center)
 
-    strip_count = max(ceil(lawn.height / cutter.height), instance.number_of_cutters)
+    cx, cy = instance.cutter_center
+    horizontal = sweep_tours(boundary, instance.cutter, (cx, cy), instance.number_of_cutters)
+    vertical = [CutterTour(x=t.y, y=t.x) 
+                for t in sweep_tours(transpose(boundary), transpose(instance.cutter), (cy, cx), instance.number_of_cutters)]
+
+    tours = horizontal if max(t.length for t in horizontal) <= max(t.length for t in vertical) else vertical
+
+    return CGSHOP2027Solution(
+        instance_uid=instance.instance_uid,
+        tours=tours,
+        meta={"algorithm": "scanline"},
+    )
+
+def sweep_tours(boundary, cutter_shape, center, number_of_cutters) -> list[CutterTour]:
+    lawn = Rect.enclosing(boundary.x, boundary.y)
+    cutter = compute_rect_cutter(cutter_shape, center)
+
+    strip_count = max(ceil(lawn.height / cutter.height), number_of_cutters)
     anchor_rows = [lawn.top - cutter.top - i * cutter.height for i in range(strip_count)]
 
     spans = row_spans(boundary)
@@ -127,14 +146,9 @@ def solve(instance: CGSHOP2027Instance) -> CGSHOP2027Solution:
         bands.append((row, sweep[0], sweep[1]))
 
     tours = []
-    for block in divide(instance.number_of_cutters, bands):
+    for block in divide(number_of_cutters, bands):
         tours.append(tour(list(block)))
-
-    return CGSHOP2027Solution(
-        instance_uid=instance.instance_uid,
-        tours=tours,
-        meta={"algorithm": "scanline"},
-    )
+    return tours
 
 
 def tour(bands: list[tuple[int, int, int]]) -> CutterTour:
